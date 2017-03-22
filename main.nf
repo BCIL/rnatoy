@@ -30,9 +30,9 @@
  * Defines some parameters in order to specify the refence genomes
  * and read pairs by using the command line options
  */
-params.reads = "$baseDir/data/ggal/*_{1,2}.fq"
-params.annot = "$baseDir/data/ggal/ggal_1_48850000_49020000.bed.gff"
-params.genome = "$baseDir/data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.fa"
+params.reads = "$baseDir/data/10{N,T}_{1,2}.raw.fq"
+params.annot = "$baseDir/data/chr19.gff"
+params.genome = "$baseDir/data/chr19.fa"
 params.outdir = 'results'
 
 log.info "R N A T O Y   P I P E L I N E    "
@@ -57,22 +57,6 @@ Channel
     .ifEmpty { error "Cannot find any reads matching: ${params.reads}" }
     .set { read_pairs } 
  
-/*
- * Step 1. Builds the genome index required by the mapping process
- */
-process buildIndex {
-    tag "$genome_file.baseName"
-    
-    input:
-    file genome_file
-     
-    output:
-    file 'genome.index*' into genome_index
-       
-    """
-    bowtie2-build --threads ${task.cpus} ${genome_file} genome.index
-    """
-}
  
 /*
  * Step 2. Maps each read-pair by using Tophat2 mapper tool
@@ -83,14 +67,13 @@ process mapping {
     input:
     file 'genome.index.fa' from genome_file 
     file annotation_file
-    file genome_index from genome_index.first()
     set pair_id, file(reads) from read_pairs
  
     output:
     set pair_id, "accepted_hits.bam" into bam
  
     """
-    tophat2 -p ${task.cpus} --GTF $annotation_file genome.index ${reads}
+    tophat2 -p ${task.cpus} --GTF $annotation_file "/home/bioitcore/NexFlow/rnatoy/data/chr19" ${reads}
     mv tophat_out/accepted_hits.bam .
     """
 }
